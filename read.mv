@@ -1,0 +1,32 @@
+# URL Shortener API
+
+A backend URL shortener project built with Node.js, Express.js, MySQL, and Redis.
+
+## Features
+
+- Create short URLs
+- Redirect to original URLs
+- Store URLs permanently in MySQL
+- Track click analytics
+- Cache redirect lookups using Redis
+- View all stored URLs
+
+## Tech Stack
+
+- Node.js
+- Express.js
+- MySQL
+- Redis
+- dotenv
+
+## Project Structure
+
+```text
+url-shortener
+├── app.js
+├── db.js
+├── redisClient.js
+├── .env
+├── .gitignore
+├── package.json
+└── README.md
