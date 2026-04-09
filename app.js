@@ -7,6 +7,7 @@ const { client, connectRedis } = require("./redisClient");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 
 app.use(express.json());
 
@@ -37,7 +38,7 @@ app.post("/shorten", (req, res) => {
         }
 
         res.json({
-            shortUrl: `http://localhost:${PORT}/${shortCode}`,
+            shortUrl: `${BASE_URL}/${shortCode}`,
             shortCode: shortCode
         });
     });
