@@ -1,142 +1,79 @@
 require("dotenv").config();
 
 const express = require("express");
+const cors = require("cors");
 const { nanoid } = require("nanoid");
-const db = require("./db");
-const { client, connectRedis } = require("./redisClient");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 
+// Replace with your Render URL
+const BASE_URL = "https://url-shortener-api-zp3j.onrender.com";
+
+app.use(cors({ origin: "*" }));
 app.use(express.json());
 
+// In-memory storage (resets on restart)
+const urlMap = {};
+const analyticsMap = {};
+
 app.get("/", (req, res) => {
-    res.send("URL Shortener API Running");
+  res.send("URL Shortener API Running");
 });
 
+// Create short URL
 app.post("/shorten", (req, res) => {
-    const longUrl = req.body.url;
+  let longUrl = req.body.url;
 
-    if (!longUrl) {
-        return res.status(400).json({ error: "URL is required" });
-    }
+  if (!longUrl) {
+    return res.status(400).json({ error: "URL is required" });
+  }
 
-    const shortCode = nanoid(6);
+  if (!longUrl.startsWith("http://") && !longUrl.startsWith("https://")) {
+    longUrl = "https://" + longUrl;
+  }
 
-    const sql = "INSERT INTO urls (short_code, long_url) VALUES (?, ?)";
-    db.query(sql, [shortCode, longUrl], async (err) => {
-        if (err) {
-            console.error("Insert error:", err.message);
-            return res.status(500).json({ error: "Database insert failed" });
-        }
+  const shortCode = nanoid(6);
 
-        try {
-            await client.set(shortCode, longUrl);
-        } catch (redisErr) {
-            console.error("Redis set error:", redisErr.message);
-        }
+  urlMap[shortCode] = longUrl;
 
-        res.json({
-            shortUrl: `${BASE_URL}/${shortCode}`,
-            shortCode: shortCode
-        });
-    });
+  analyticsMap[shortCode] = {
+    clicks: 0,
+    longUrl,
+    shortCode,
+  };
+
+  res.json({
+    shortUrl: `${BASE_URL}/${shortCode}`,
+    shortCode,
+  });
 });
 
+// Get analytics
 app.get("/analytics/:code", (req, res) => {
-    const code = req.params.code;
+  const code = req.params.code;
 
-    const sql = "SELECT short_code, long_url, clicks, created_at FROM urls WHERE short_code = ?";
-    db.query(sql, [code], (err, results) => {
-        if (err) {
-            console.error("Analytics error:", err.message);
-            return res.status(500).json({ error: "Database error" });
-        }
+  if (!analyticsMap[code]) {
+    return res.status(404).json({ error: "Analytics not found" });
+  }
 
-        if (results.length === 0) {
-            return res.status(404).json({ error: "URL not found in database" });
-        }
-
-        res.json(results[0]);
-    });
+  res.json(analyticsMap[code]);
 });
 
-app.get("/all-urls", (req, res) => {
-    db.query("SELECT * FROM urls", (err, results) => {
-        if (err) {
-            console.error("All URLs error:", err.message);
-            return res.status(500).json({ error: "Database error" });
-        }
+// Redirect short URL
+app.get("/:code", (req, res) => {
+  const code = req.params.code;
+  const longUrl = urlMap[code];
 
-        res.json(results);
-    });
+  if (!longUrl) {
+    return res.status(404).send("URL not found");
+  }
+
+  analyticsMap[code].clicks += 1;
+
+  res.redirect(longUrl);
 });
 
-app.get("/:code", async (req, res) => {
-    const code = req.params.code;
-    console.log("Redirect route called with code:", code);
-
-    try {
-        const cachedUrl = await client.get(code);
-
-        if (cachedUrl) {
-            console.log("Cache hit for:", code);
-
-            const updateSql = "UPDATE urls SET clicks = clicks + 1 WHERE short_code = ?";
-            db.query(updateSql, [code], (updateErr) => {
-                if (updateErr) {
-                    console.error("Update error:", updateErr.message);
-                }
-
-                return res.redirect(cachedUrl);
-            });
-
-            return;
-        }
-
-        console.log("Cache miss for:", code);
-
-        const selectSql = "SELECT long_url FROM urls WHERE short_code = ?";
-        db.query(selectSql, [code], async (err, results) => {
-            if (err) {
-                console.error("Select error:", err.message);
-                return res.status(500).send("Database error");
-            }
-
-            if (results.length === 0) {
-                return res.status(404).send("URL not found");
-            }
-
-            const longUrl = results[0].long_url;
-
-            try {
-                await client.set(code, longUrl);
-            } catch (redisErr) {
-                console.error("Redis set error:", redisErr.message);
-            }
-
-            const updateSql = "UPDATE urls SET clicks = clicks + 1 WHERE short_code = ?";
-            db.query(updateSql, [code], (updateErr) => {
-                if (updateErr) {
-                    console.error("Update error:", updateErr.message);
-                }
-
-                res.redirect(longUrl);
-            });
-        });
-    } catch (error) {
-        console.error("Redis get error:", error.message);
-        res.status(500).send("Server error");
-    }
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
-
-connectRedis()
-    .then(() => {
-        app.listen(PORT, () => {
-            console.log(`Server running on port ${PORT}`);
-        });
-    })
-    .catch((err) => {
-        console.error("Failed to connect Redis:", err.message);
-    });
