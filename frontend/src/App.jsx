@@ -6,21 +6,23 @@ function App() {
   const [shortCode, setShortCode] = useState("");
   const [clicks, setClicks] = useState(null);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const handleShorten = async () => {
     setError("");
     setShortUrl("");
     setShortCode("");
     setClicks(null);
+    setCopied(false);
+    setLoading(true);
 
     try {
       const res = await fetch(
         "https://url-shortener-api-zp3j.onrender.com/shorten",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ url }),
         }
       );
@@ -36,8 +38,9 @@ function App() {
       setShortCode(data.shortCode);
       setClicks(0);
     } catch (err) {
-      console.error(err);
       setError("Could not connect to backend.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -58,53 +61,162 @@ function App() {
 
       setClicks(data.clicks);
     } catch (err) {
-      console.error(err);
       setError("Could not fetch analytics.");
     }
   };
 
+  const copyLink = async () => {
+    await navigator.clipboard.writeText(shortUrl);
+    setCopied(true);
+  };
+
   return (
-    <div style={{ textAlign: "center", marginTop: "100px" }}>
-      <h1>URL Shortener</h1>
+    <div style={styles.page}>
+      <div style={styles.card}>
+        <h1 style={styles.title}>URL Shortener</h1>
+        <p style={styles.subtitle}>
+          Shorten long links and track clicks in real time.
+        </p>
 
-      <input
-        type="text"
-        placeholder="Enter your long URL"
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-        style={{ padding: "10px", width: "320px" }}
-      />
+        <div style={styles.inputRow}>
+          <input
+            type="text"
+            placeholder="Paste your long URL here..."
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            style={styles.input}
+          />
 
-      <br />
-      <br />
+          <button onClick={handleShorten} style={styles.primaryButton}>
+            {loading ? "Shortening..." : "Shorten"}
+          </button>
+        </div>
 
-      <button onClick={handleShorten} style={{ padding: "10px 20px" }}>
-        Shorten
-      </button>
+        {error && <p style={styles.error}>{error}</p>}
 
-      <br />
-      <br />
+        {shortUrl && (
+          <div style={styles.resultBox}>
+            <p style={styles.label}>Your short link</p>
 
-      {shortUrl && (
-        <div>
-          <p>
-            Short URL:{" "}
-            <a href={shortUrl} target="_blank" rel="noreferrer">
+            <a
+              href={shortUrl}
+              target="_blank"
+              rel="noreferrer"
+              style={styles.link}
+            >
               {shortUrl}
             </a>
-          </p>
 
-          <button onClick={getAnalytics} style={{ padding: "8px 16px" }}>
-            Check Clicks
-          </button>
+            <div style={styles.buttonRow}>
+              <button onClick={copyLink} style={styles.secondaryButton}>
+                {copied ? "Copied!" : "Copy Link"}
+              </button>
 
-          {clicks !== null && <p>Total Clicks: {clicks}</p>}
-        </div>
-      )}
+              <button onClick={getAnalytics} style={styles.secondaryButton}>
+                Check Clicks
+              </button>
+            </div>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
+            {clicks !== null && (
+              <p style={styles.clicks}>Total Clicks: {clicks}</p>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+
+const styles = {
+  page: {
+    minHeight: "100vh",
+    background: "linear-gradient(135deg, #111827, #1f2937)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    fontFamily: "Arial, sans-serif",
+    padding: "20px",
+  },
+  card: {
+    width: "100%",
+    maxWidth: "650px",
+    background: "#ffffff",
+    borderRadius: "18px",
+    padding: "40px",
+    textAlign: "center",
+    boxShadow: "0 20px 50px rgba(0,0,0,0.3)",
+  },
+  title: {
+    fontSize: "44px",
+    marginBottom: "10px",
+    color: "#111827",
+  },
+  subtitle: {
+    fontSize: "16px",
+    color: "#6b7280",
+    marginBottom: "30px",
+  },
+  inputRow: {
+    display: "flex",
+    gap: "12px",
+    justifyContent: "center",
+    flexWrap: "wrap",
+  },
+  input: {
+    flex: "1",
+    minWidth: "260px",
+    padding: "14px",
+    borderRadius: "10px",
+    border: "1px solid #d1d5db",
+    fontSize: "16px",
+  },
+  primaryButton: {
+    padding: "14px 22px",
+    borderRadius: "10px",
+    border: "none",
+    background: "#2563eb",
+    color: "#ffffff",
+    fontSize: "16px",
+    cursor: "pointer",
+  },
+  resultBox: {
+    marginTop: "30px",
+    padding: "20px",
+    borderRadius: "14px",
+    background: "#f3f4f6",
+  },
+  label: {
+    color: "#6b7280",
+    marginBottom: "8px",
+  },
+  link: {
+    color: "#2563eb",
+    fontWeight: "bold",
+    wordBreak: "break-all",
+  },
+  buttonRow: {
+    marginTop: "18px",
+    display: "flex",
+    gap: "12px",
+    justifyContent: "center",
+    flexWrap: "wrap",
+  },
+  secondaryButton: {
+    padding: "10px 16px",
+    borderRadius: "8px",
+    border: "1px solid #d1d5db",
+    background: "#ffffff",
+    cursor: "pointer",
+  },
+  clicks: {
+    marginTop: "15px",
+    fontWeight: "bold",
+    color: "#111827",
+  },
+  error: {
+    color: "red",
+    marginTop: "15px",
+  },
+};
 
 export default App;
