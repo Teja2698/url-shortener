@@ -9,28 +9,35 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  const API_URL = "https://url-shortener-api-zp3j.onrender.com";
+
   const handleShorten = async () => {
     setError("");
     setShortUrl("");
     setShortCode("");
     setClicks(null);
     setCopied(false);
+
+    if (!url.trim()) {
+      setError("Please enter a URL.");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const res = await fetch(
-        "https://url-shortener-api-zp3j.onrender.com/shorten",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url }),
-        }
-      );
+      const res = await fetch(`${API_URL}/shorten`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url }),
+      });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Failed to shorten URL");
+        setError(data.error || "Failed to shorten URL.");
         return;
       }
 
@@ -48,14 +55,11 @@ function App() {
     if (!shortCode) return;
 
     try {
-      const res = await fetch(
-        `https://url-shortener-api-zp3j.onrender.com/analytics/${shortCode}`
-      );
-
+      const res = await fetch(`${API_URL}/analytics/${shortCode}`);
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Analytics not found");
+        setError(data.error || "Analytics not found.");
         return;
       }
 
@@ -73,12 +77,22 @@ function App() {
   return (
     <div style={styles.page}>
       <div style={styles.card}>
+        <div style={styles.badge}>Full-Stack Project</div>
+
         <h1 style={styles.title}>URL Shortener</h1>
+
         <p style={styles.subtitle}>
           Shorten long links and track clicks in real time.
         </p>
 
-        <div style={styles.inputRow}>
+        <div style={styles.techRow}>
+          <span style={styles.techBadge}>React</span>
+          <span style={styles.techBadge}>Node.js</span>
+          <span style={styles.techBadge}>Express</span>
+          <span style={styles.techBadge}>Render</span>
+        </div>
+
+        <div style={styles.inputBox}>
           <input
             type="text"
             placeholder="Paste your long URL here..."
@@ -96,13 +110,13 @@ function App() {
 
         {shortUrl && (
           <div style={styles.resultBox}>
-            <p style={styles.label}>Your short link</p>
+            <p style={styles.resultLabel}>Your short link</p>
 
             <a
               href={shortUrl}
               target="_blank"
               rel="noreferrer"
-              style={styles.link}
+              style={styles.shortLink}
             >
               {shortUrl}
             </a>
@@ -117,9 +131,13 @@ function App() {
               </button>
             </div>
 
-            {clicks !== null && (
-              <p style={styles.clicks}>Total Clicks: {clicks}</p>
-            )}
+            <div style={styles.analyticsCard}>
+              <p style={styles.analyticsTitle}>Analytics</p>
+              <p style={styles.analyticsNumber}>
+                {clicks !== null ? clicks : 0}
+              </p>
+              <p style={styles.analyticsText}>Total Clicks</p>
+            </div>
           </div>
         )}
       </div>
@@ -130,92 +148,146 @@ function App() {
 const styles = {
   page: {
     minHeight: "100vh",
-    background: "linear-gradient(135deg, #111827, #1f2937)",
+    background:
+      "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #2563eb 100%)",
     display: "flex",
-    justifyContent: "center",
     alignItems: "center",
+    justifyContent: "center",
+    padding: "24px",
     fontFamily: "Arial, sans-serif",
-    padding: "20px",
   },
   card: {
     width: "100%",
-    maxWidth: "650px",
-    background: "#ffffff",
-    borderRadius: "18px",
-    padding: "40px",
+    maxWidth: "780px",
+    background: "rgba(255, 255, 255, 0.96)",
+    borderRadius: "24px",
+    padding: "44px",
     textAlign: "center",
-    boxShadow: "0 20px 50px rgba(0,0,0,0.3)",
+    boxShadow: "0 25px 70px rgba(0,0,0,0.35)",
+  },
+  badge: {
+    display: "inline-block",
+    background: "#dbeafe",
+    color: "#1d4ed8",
+    padding: "8px 14px",
+    borderRadius: "999px",
+    fontWeight: "bold",
+    fontSize: "14px",
+    marginBottom: "16px",
   },
   title: {
-    fontSize: "44px",
-    marginBottom: "10px",
-    color: "#111827",
+    fontSize: "54px",
+    margin: "0 0 10px",
+    color: "#0f172a",
   },
   subtitle: {
-    fontSize: "16px",
-    color: "#6b7280",
+    fontSize: "18px",
+    color: "#64748b",
+    marginBottom: "20px",
+  },
+  techRow: {
+    display: "flex",
+    justifyContent: "center",
+    gap: "10px",
+    flexWrap: "wrap",
     marginBottom: "30px",
   },
-  inputRow: {
+  techBadge: {
+    background: "#f1f5f9",
+    color: "#334155",
+    padding: "7px 12px",
+    borderRadius: "999px",
+    fontSize: "14px",
+    fontWeight: "600",
+  },
+  inputBox: {
     display: "flex",
     gap: "12px",
-    justifyContent: "center",
-    flexWrap: "wrap",
+    background: "#f8fafc",
+    padding: "10px",
+    borderRadius: "16px",
+    border: "1px solid #e2e8f0",
   },
   input: {
-    flex: "1",
-    minWidth: "260px",
-    padding: "14px",
-    borderRadius: "10px",
-    border: "1px solid #d1d5db",
+    flex: 1,
+    border: "none",
+    outline: "none",
+    background: "transparent",
     fontSize: "16px",
+    padding: "14px",
+    color: "#0f172a",
   },
   primaryButton: {
-    padding: "14px 22px",
-    borderRadius: "10px",
-    border: "none",
     background: "#2563eb",
     color: "#ffffff",
+    border: "none",
+    borderRadius: "12px",
+    padding: "14px 24px",
     fontSize: "16px",
+    fontWeight: "bold",
     cursor: "pointer",
   },
   resultBox: {
-    marginTop: "30px",
-    padding: "20px",
-    borderRadius: "14px",
-    background: "#f3f4f6",
+    marginTop: "28px",
+    background: "#f8fafc",
+    border: "1px solid #e2e8f0",
+    borderRadius: "18px",
+    padding: "24px",
   },
-  label: {
-    color: "#6b7280",
-    marginBottom: "8px",
+  resultLabel: {
+    color: "#64748b",
+    marginBottom: "10px",
+    fontWeight: "600",
   },
-  link: {
+  shortLink: {
     color: "#2563eb",
     fontWeight: "bold",
+    fontSize: "17px",
     wordBreak: "break-all",
   },
   buttonRow: {
-    marginTop: "18px",
     display: "flex",
-    gap: "12px",
     justifyContent: "center",
+    gap: "12px",
     flexWrap: "wrap",
+    marginTop: "20px",
   },
   secondaryButton: {
-    padding: "10px 16px",
-    borderRadius: "8px",
-    border: "1px solid #d1d5db",
     background: "#ffffff",
+    color: "#0f172a",
+    border: "1px solid #cbd5e1",
+    borderRadius: "10px",
+    padding: "11px 18px",
+    fontSize: "15px",
+    fontWeight: "600",
     cursor: "pointer",
   },
-  clicks: {
-    marginTop: "15px",
+  analyticsCard: {
+    margin: "24px auto 0",
+    maxWidth: "220px",
+    background: "#0f172a",
+    color: "#ffffff",
+    borderRadius: "16px",
+    padding: "20px",
+  },
+  analyticsTitle: {
+    margin: 0,
+    color: "#93c5fd",
     fontWeight: "bold",
-    color: "#111827",
+  },
+  analyticsNumber: {
+    fontSize: "42px",
+    fontWeight: "bold",
+    margin: "8px 0",
+  },
+  analyticsText: {
+    margin: 0,
+    color: "#cbd5e1",
   },
   error: {
-    color: "red",
-    marginTop: "15px",
+    color: "#dc2626",
+    marginTop: "16px",
+    fontWeight: "600",
   },
 };
 
